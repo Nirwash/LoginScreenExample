@@ -4,4 +4,9 @@
     <string name="password">Password</string>
     <string name="invalid_email_message">Invalid email</string>
     <string name="invalid_password">Password is empty</string>
+    <string name="agreement_full_text">I agree with terms of use and privacy police</string>
+    <string name="use">use</string>
+    <string name="policy">privacy police</string>
+    <string name="attention">Attention</string>
+    <string name="server_is_not_available">Server is not available</string>
 </resources>
