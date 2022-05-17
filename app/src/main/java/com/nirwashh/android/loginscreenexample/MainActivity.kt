@@ -3,6 +3,7 @@ package com.nirwashh.android.loginscreenexample
 import android.app.Dialog
 import android.content.Context
 import android.graphics.Color
+import android.nfc.Tag
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
@@ -13,26 +14,57 @@ import android.text.Spanned
 import android.text.TextPaint
 import android.text.method.LinkMovementMethod
 import android.text.style.ClickableSpan
+import android.util.Log
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import com.nirwashh.android.loginscreenexample.databinding.ActivityMainBinding
 
+const val TAG = "MainActivity"
+const val KEY = "screenState"
 class MainActivity : AppCompatActivity() {
     private lateinit var b: ActivityMainBinding
+    private companion object {
+        const val INITIAL = 0
+        const val PROGRESS = 1
+        const val SUCCESS = 2
+        const val FAILED = 3
+    }
+
+    private var state = INITIAL
+
+    private val textWatcher = object : SimpleTextWatcher() {
+        override fun afterTextChanged(p0: Editable?) {
+//            Log.d(TAG, "changed: $p0")
+            b.textInputLayout.isErrorEnabled = false
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
+        Log.d(TAG, "onCreate: savedInstanceState - ${savedInstanceState == null}")
+        savedInstanceState?.let {
+            state = it.getInt(KEY)
+        }
+        Log.d(TAG, "state is $state")
+
+        when (state) {
+            FAILED -> showDialog(b.contentLayout)
+            SUCCESS -> {
+                Snackbar.make(b.contentLayout, "Success", Snackbar.LENGTH_LONG).show()
+                state = INITIAL
+            }
+        }
 
 
         spannableText()
-        b.textInputEmail.addTextChangedListener(object : SimpleTextWatcher() {
-            override fun afterTextChanged(p0: Editable?) {
-                b.textInputLayout.isErrorEnabled = false
-            }
-        })
 
         b.textInputPassword.addTextChangedListener(object : SimpleTextWatcher() {
             override fun afterTextChanged(p0: Editable?) {
@@ -59,17 +91,41 @@ class MainActivity : AppCompatActivity() {
             if (validEmail && validPassword) {
                 b.contentLayout.visibility = View.GONE
                 b.progressBar.visibility = View.VISIBLE
+                state = PROGRESS
                 Handler(Looper.myLooper()!!).postDelayed({
+                    state = FAILED
                     b.contentLayout.visibility = View.VISIBLE
                     b.progressBar.visibility = View.GONE
-                    val myDialogFragment = MyDialogFragment()
-                    myDialogFragment.show(supportFragmentManager, "MyDialog")
+                    showDialog(b.contentLayout)
                 }, 3000)
             }
 
         }
 
 
+    }
+
+    override fun onResume() {
+        super.onResume()
+        b.textInputEmail.addTextChangedListener(textWatcher)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        b.textInputEmail.removeTextChangedListener(textWatcher)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt(KEY, state)
+    }
+
+//region methods
+
+    private fun showDialog(viewGroup: ViewGroup) {
+        val myDialogFragment = MyDialogFragment()
+        myDialogFragment.show(supportFragmentManager, "MyDialog")
+        if (!myDialogFragment.isVisible) state = INITIAL
     }
 
     private fun hideKeyboard(context: Context, view: View) {
@@ -115,5 +171,6 @@ class MainActivity : AppCompatActivity() {
             highlightColor = Color.TRANSPARENT
         }
     }
+//endregion
 
 }
